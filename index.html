@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STAAR Strategy Showdown</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#1a1a2e;--card:#16213e;--card2:#0f3460;--accent:#e94560;
+  --gold:#ffd700;--green:#00d68f;--blue:#4fc3f7;--purple:#b39ddb;
+  --text:#eaeaea;--muted:#8892a4;
+  --timer-ok:#00d68f;--timer-warn:#ffd700;--timer-danger:#e94560;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(1px 1px at 10% 15%,rgba(255,255,255,.4) 0%,transparent 100%),radial-gradient(1px 1px at 30% 60%,rgba(255,255,255,.3) 0%,transparent 100%),radial-gradient(1px 1px at 60% 20%,rgba(255,255,255,.4) 0%,transparent 100%),radial-gradient(2px 2px at 90% 10%,rgba(255,255,255,.5) 0%,transparent 100%),radial-gradient(1px 1px at 70% 50%,rgba(255,255,255,.4) 0%,transparent 100%);pointer-events:none;z-index:0;}
+.screen{display:none;position:relative;z-index:1;}
+.screen.active{display:flex;flex-direction:column;align-items:center;min-height:100vh;}
+
+/* START */
+#startScreen{justify-content:center;padding:2rem 1.5rem;text-align:center;gap:1.4rem;}
+.game-title{font-family:'Fredoka One',cursive;font-size:clamp(2.4rem,8vw,4rem);color:var(--gold);text-shadow:0 0 30px rgba(255,215,0,.5),4px 4px 0 rgba(0,0,0,.4);line-height:1.1;animation:titlePulse 2s ease infinite alternate;}
+@keyframes titlePulse{from{text-shadow:0 0 20px rgba(255,215,0,.4),4px 4px 0 rgba(0,0,0,.4);}to{text-shadow:0 0 50px rgba(255,215,0,.8),4px 4px 0 rgba(0,0,0,.4);}}
+.game-subtitle{color:var(--blue);font-size:1rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;}
+.name-wrap{display:flex;flex-direction:column;gap:.6rem;align-items:center;width:100%;max-width:340px;}
+.field-label{font-size:.82rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;}
+.name-input{width:100%;background:var(--card);border:2px solid var(--card2);border-radius:12px;color:var(--text);font-family:'Nunito',sans-serif;font-size:1.1rem;font-weight:700;padding:.7rem 1rem;text-align:center;outline:none;transition:border-color .2s;}
+.name-input:focus{border-color:var(--accent);}
+.name-input::placeholder{color:var(--muted);}
+.strat-grid{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;max-width:400px;}
+.strat-chip{background:var(--card);border:2px solid var(--card2);border-radius:20px;color:var(--muted);font-family:'Nunito',sans-serif;font-size:.8rem;font-weight:800;padding:.35rem .85rem;cursor:pointer;transition:all .18s;user-select:none;}
+.start-btn{font-family:'Fredoka One',cursive;font-size:1.4rem;background:linear-gradient(135deg,var(--accent),#ff6b81);color:#fff;border:none;border-radius:16px;padding:.9rem 3rem;cursor:pointer;box-shadow:0 6px 20px rgba(233,69,96,.45),0 3px 0 #a02040;transition:all .15s;margin-top:.5rem;}
+.start-btn:hover{transform:translateY(-3px);}
+.start-btn:active{transform:translateY(1px);}
+
+/* LEADERBOARD PANEL */
+.lb-panel{background:var(--card);border:1.5px solid var(--card2);border-radius:14px;padding:1rem 1.4rem;width:100%;max-width:380px;}
+.lb-panel-title{font-family:'Fredoka One',cursive;color:var(--gold);font-size:1rem;margin-bottom:.6rem;text-align:center;}
+.lb-entry{display:flex;align-items:center;gap:.7rem;padding:.35rem 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:.88rem;font-weight:700;}
+.lb-entry:last-child{border-bottom:none;}
+.lb-rank{font-family:'Fredoka One',cursive;font-size:1rem;width:22px;text-align:center;color:var(--muted);}
+.lb-rank.gold{color:#ffd700;}.lb-rank.silver{color:#c0c0c0;}.lb-rank.bronze{color:#cd7f32;}
+.lb-name{flex:1;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.lb-score{color:var(--gold);font-family:'Fredoka One',cursive;}
+.lb-loading{color:var(--muted);text-align:center;font-size:.85rem;padding:.5rem;}
+.live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);margin-right:5px;animation:blink 1.2s ease infinite alternate;}
+@keyframes blink{from{opacity:1}to{opacity:.2}}
+.new-badge{font-size:.65rem;background:var(--accent);color:#fff;border-radius:4px;padding:.1rem .35rem;margin-left:4px;vertical-align:middle;}
+
+/* HUD */
+.hud{width:100%;max-width:680px;display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem .5rem;gap:.8rem;flex-wrap:wrap;}
+.hearts-display{display:flex;gap:.3rem;font-size:1.4rem;}
+.heart{transition:transform .2s,opacity .3s;}
+.heart.lost{opacity:.2;filter:grayscale(1);transform:scale(.8);}
+.score-hud{font-family:'Fredoka One',cursive;font-size:1.2rem;color:var(--gold);}
+.timer-ring{position:relative;width:48px;height:48px;}
+.timer-ring svg{transform:rotate(-90deg);}
+.timer-ring circle{fill:none;stroke-width:4;stroke-linecap:round;transition:stroke-dashoffset .1s linear,stroke .3s;}
+.timer-ring .bg{stroke:rgba(255,255,255,.1);}
+.timer-ring .fg{stroke:var(--timer-ok);stroke-dasharray:126;stroke-dashoffset:0;}
+.timer-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Fredoka One',cursive;font-size:1rem;}
+.streak-badge{background:rgba(255,215,0,.15);border:1.5px solid rgba(255,215,0,.4);border-radius:20px;padding:.2rem .7rem;font-size:.8rem;font-weight:800;color:var(--gold);display:none;}
+.streak-badge.show{display:block;animation:pop .3s ease;}
+@keyframes pop{0%{transform:scale(.7)}70%{transform:scale(1.15)}100%{transform:scale(1)}}
+
+/* QUIZ */
+#quizScreen{padding:0 1rem 4rem;align-items:center;}
+.progress-track{width:100%;max-width:680px;height:6px;background:rgba(255,255,255,.08);border-radius:3px;margin:0 0 1.2rem;overflow:hidden;}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--gold));border-radius:3px;transition:width .4s ease;}
+.q-card{background:var(--card);border:1.5px solid var(--card2);border-radius:20px;padding:1.8rem;width:100%;max-width:660px;box-shadow:0 8px 32px rgba(0,0,0,.3);position:relative;}
+.q-card.card-in{animation:cardIn .35s cubic-bezier(.34,1.56,.64,1);}
+@keyframes cardIn{from{opacity:0;transform:translateY(24px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+.q-card.shake{animation:shake .4s ease;}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-10px)}40%{transform:translateX(10px)}60%{transform:translateX(-8px)}80%{transform:translateX(8px)}}
+.q-card.correct-flash{animation:correctFlash .5s ease;}
+@keyframes correctFlash{0%{box-shadow:0 8px 32px rgba(0,0,0,.3)}50%{box-shadow:0 0 50px rgba(0,214,143,.6)}100%{box-shadow:0 8px 32px rgba(0,0,0,.3)}}
+.q-strategy-bar{display:flex;align-items:center;gap:.7rem;margin-bottom:1.2rem;}
+.q-badge{font-family:'Fredoka One',cursive;font-size:.85rem;padding:.25rem .85rem;border-radius:20px;color:#fff;}
+.q-category{font-size:.75rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.08em;}
+.q-num-label{margin-left:auto;font-size:.78rem;color:var(--muted);font-weight:700;}
+.q-text{font-size:1.08rem;font-weight:700;line-height:1.75;margin-bottom:1.3rem;}
+.blank-field{font-family:'Nunito',sans-serif;font-size:.95rem;font-weight:800;background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.2);border-radius:8px;color:var(--text);padding:.2rem .6rem;min-width:110px;text-align:center;outline:none;transition:all .2s;}
+.blank-field:focus{border-color:var(--blue);background:rgba(79,195,247,.08);}
+.blank-field.correct{border-color:var(--green);background:rgba(0,214,143,.12);color:var(--green);}
+.blank-field.wrong{border-color:var(--accent);background:rgba(233,69,96,.12);color:var(--accent);}
+.blank-field.revealed{border-color:var(--gold);background:rgba(255,215,0,.1);color:var(--gold);}
+.word-bank-label{font-size:.72rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.5rem;}
+.word-bank{display:flex;flex-wrap:wrap;gap:.45rem;margin-bottom:1.3rem;}
+.word-chip{background:var(--card2);border:1.5px solid rgba(255,255,255,.1);border-radius:8px;padding:.3rem .75rem;font-family:'Nunito',sans-serif;font-size:.82rem;font-weight:800;color:var(--blue);cursor:pointer;transition:all .16s;user-select:none;}
+.word-chip:hover{background:rgba(79,195,247,.15);border-color:var(--blue);transform:translateY(-2px);}
+.word-chip.used{opacity:.25;pointer-events:none;text-decoration:line-through;}
+.btn-row{display:flex;gap:.7rem;align-items:center;flex-wrap:wrap;}
+.btn{font-family:'Fredoka One',cursive;font-size:1rem;padding:.6rem 1.6rem;border-radius:12px;border:none;cursor:pointer;transition:all .15s;}
+.btn-check{background:linear-gradient(135deg,var(--accent),#ff6b81);color:#fff;box-shadow:0 4px 0 #a02040;}
+.btn-check:hover{transform:translateY(-2px);}
+.btn-check:active{transform:translateY(2px);box-shadow:0 1px 0 #a02040;}
+.btn-next{background:linear-gradient(135deg,var(--green),#00b07a);color:#fff;box-shadow:0 4px 0 #00704d;display:none;}
+.btn-next:hover{transform:translateY(-2px);}
+.btn-hint{background:none;border:1.5px solid rgba(255,255,255,.15);color:var(--muted);font-family:'Nunito',sans-serif;font-size:.82rem;font-weight:800;padding:.55rem 1rem;border-radius:10px;}
+.btn-hint:hover{border-color:var(--purple);color:var(--purple);}
+.explanation-box{margin-top:1.1rem;background:rgba(0,214,143,.07);border:1.5px solid rgba(0,214,143,.25);border-radius:12px;padding:.85rem 1rem;font-size:.85rem;color:#a0f0d0;line-height:1.55;display:none;}
+.explanation-box.show{display:block;animation:fadeIn .3s ease;}
+.explanation-box strong{color:var(--green);}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+/* FX */
+.float-feedback{position:fixed;top:30%;left:50%;transform:translateX(-50%) scale(0);font-family:'Fredoka One',cursive;font-size:2.5rem;pointer-events:none;z-index:999;}
+.float-feedback.pop-correct{animation:popCorrect .7s ease forwards;color:var(--green);text-shadow:0 0 20px rgba(0,214,143,.8);}
+.float-feedback.pop-wrong{animation:popWrong .6s ease forwards;color:var(--accent);text-shadow:0 0 20px rgba(233,69,96,.8);}
+@keyframes popCorrect{0%{transform:translateX(-50%) scale(0) rotate(-10deg);opacity:1}40%{transform:translateX(-50%) scale(1.3) rotate(5deg);opacity:1}100%{transform:translateX(-50%) scale(1) translateY(-40px);opacity:0}}
+@keyframes popWrong{0%{transform:translateX(-50%) scale(0);opacity:1}40%{transform:translateX(-50%) scale(1.2);opacity:1}100%{transform:translateX(-50%) scale(.9) translateY(-30px);opacity:0}}
+.confetti-piece{position:fixed;width:10px;height:10px;top:-10px;border-radius:2px;pointer-events:none;z-index:998;animation:confettiFall linear forwards;}
+@keyframes confettiFall{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(720deg);opacity:0}}
+
+/* END */
+#endScreen{justify-content:center;padding:2rem 1.5rem;text-align:center;gap:1.2rem;}
+.end-icon{font-size:5rem;animation:bounce 1s ease infinite alternate;}
+@keyframes bounce{from{transform:translateY(0)}to{transform:translateY(-14px)}}
+.end-title{font-family:'Fredoka One',cursive;font-size:2.5rem;color:var(--gold);text-shadow:0 0 20px rgba(255,215,0,.5);}
+.end-msg{color:var(--muted);font-size:1rem;font-weight:700;}
+.end-stats-grid{display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap;margin:.5rem 0;}
+.end-stat{background:var(--card);border:1.5px solid var(--card2);border-radius:14px;padding:.8rem 1.4rem;text-align:center;min-width:90px;}
+.end-stat-num{font-family:'Fredoka One',cursive;font-size:1.9rem;color:var(--gold);display:block;}
+.end-stat-label{font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;}
+.btn-play-again{font-family:'Fredoka One',cursive;font-size:1.2rem;background:linear-gradient(135deg,var(--accent),#ff6b81);color:#fff;border:none;border-radius:14px;padding:.75rem 2.2rem;cursor:pointer;box-shadow:0 5px 0 #a02040;transition:all .15s;}
+.btn-play-again:hover{transform:translateY(-2px);}
+
+@media(max-width:500px){.q-card{padding:1.2rem;}.hud{padding:.8rem 1rem .3rem;}}
+</style>
+</head>
+<body>
+
+<div class="screen active" id="startScreen">
+  <div class="game-title">⚡ Strategy<br>Showdown</div>
+  <div class="game-subtitle">STAAR ELA · 7th Grade</div>
+  <div class="name-wrap">
+    <div class="field-label">Your Name</div>
+    <input class="name-input" id="playerName" type="text" placeholder="Enter your name..." maxlength="20"/>
+  </div>
+  <div>
+    <div class="field-label" style="text-align:center;margin-bottom:.5rem">Choose Strategies</div>
+    <div class="strat-grid" id="strategyGrid"></div>
+  </div>
+  <button class="start-btn" onclick="startGame()">▶ PLAY NOW</button>
+  <div style="color:var(--muted);font-size:.8rem;font-weight:700;">❤️ 3 lives &nbsp;·&nbsp; ⏱ 20 sec &nbsp;·&nbsp; 🏆 Live Leaderboard</div>
+  <div class="lb-panel">
+    <div class="lb-panel-title"><span class="live-dot"></span>Live Leaderboard</div>
+    <div id="startLb"><div class="lb-loading">Loading scores...</div></div>
+  </div>
+</div>
+
+<div class="screen" id="quizScreen">
+  <div class="hud">
+    <div class="hearts-display" id="heartsDisplay"></div>
+    <div class="streak-badge" id="streakBadge">🔥 0</div>
+    <div class="timer-ring">
+      <svg viewBox="0 0 48 48" width="48" height="48">
+        <circle class="bg" cx="24" cy="24" r="20"/>
+        <circle class="fg" id="timerCircle" cx="24" cy="24" r="20"/>
+      </svg>
+      <div class="timer-num" id="timerNum">20</div>
+    </div>
+    <div class="score-hud">⭐ <span id="scoreHud">0</span></div>
+  </div>
+  <div class="progress-track" style="max-width:660px;width:calc(100% - 2rem);">
+    <div class="progress-fill" id="progressFill" style="width:0%"></div>
+  </div>
+  <div class="q-card" id="qCard">
+    <div class="q-strategy-bar">
+      <div class="q-badge" id="qBadge"></div>
+      <div class="q-category" id="qCategory"></div>
+      <div class="q-num-label" id="qNumLabel"></div>
+    </div>
+    <div class="q-text" id="qText"></div>
+    <div class="word-bank-label">Word Bank — click to fill</div>
+    <div class="word-bank" id="wordBank"></div>
+    <div class="btn-row">
+      <button class="btn btn-check" id="checkBtn" onclick="checkAnswer()">CHECK ✓</button>
+      <button class="btn btn-next" id="nextBtn" onclick="nextQuestion()">NEXT →</button>
+      <button class="btn btn-hint" onclick="showHint()">💡 Hint</button>
+    </div>
+    <div class="explanation-box" id="explanationBox"></div>
+  </div>
+</div>
+
+<div class="screen" id="endScreen">
+  <div class="end-icon" id="endIcon">🏆</div>
+  <div class="end-title" id="endTitle">Quiz Complete!</div>
+  <div class="end-msg" id="endMsg"></div>
+  <div class="end-stats-grid">
+    <div class="end-stat"><span class="end-stat-num" id="endScore">0</span><span class="end-stat-label">Score</span></div>
+    <div class="end-stat"><span class="end-stat-num" id="endCorrect">0/0</span><span class="end-stat-label">Correct</span></div>
+    <div class="end-stat"><span class="end-stat-num" id="endAccuracy">0%</span><span class="end-stat-label">Accuracy</span></div>
+    <div class="end-stat"><span class="end-stat-num" id="endBest">0🔥</span><span class="end-stat-label">Best Streak</span></div>
+  </div>
+  <div class="lb-panel" style="max-width:420px;">
+    <div class="lb-panel-title"><span class="live-dot"></span>Live Leaderboard</div>
+    <div id="endLb"><div class="lb-loading">Saving score...</div></div>
+  </div>
+  <button class="btn-play-again" onclick="goStart()">▶ Play Again</button>
+</div>
+
+<div class="float-feedback" id="floatFb"></div>
+
+<script>
+// ── Google Sheets backend ──
+const GS_URL = "https://script.google.com/macros/s/AKfycbxflJ5nQxWcLYIFiE40zvOL4cMDjd7CRP1aiJWOoDfDD8tqerIu-gE-u3_htnNxP4GXiA/exec";
+
+async function fetchScores() {
+  try {
+    const res = await fetch(GS_URL);
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch { return getLocal(); }
+}
+
+async function pushScore(name, score) {
+  // Save locally first as instant feedback
+  const lb = getLocal();
+  lb.push({name, score, date: new Date().toLocaleDateString()});
+  lb.sort((a,b)=>b.score-a.score);
+  try { localStorage.setItem('staar_ss', JSON.stringify(lb.slice(0,20))); } catch {}
+  // Send to Google Sheets (no-cors to avoid preflight issues)
+  try {
+    await fetch(GS_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({name, score, date: new Date().toLocaleDateString()})
+    });
+  } catch {}
+}
+
+function getLocal() { try { return JSON.parse(localStorage.getItem('staar_ss')||'[]'); } catch { return []; } }
+
+function renderLb(scores, elId, highlightName, highlightScore) {
+  const medals=['🥇','🥈','🥉'], rc=['gold','silver','bronze'];
+  const el = document.getElementById(elId);
+  if (!scores.length) { el.innerHTML='<div class="lb-loading">No scores yet — be the first! 🎯</div>'; return; }
+  el.innerHTML = scores.slice(0,10).map((e,i) => {
+    const isNew = highlightName && e.name===highlightName && Number(e.score)===highlightScore
+                  && i===scores.findIndex(x=>x.name===highlightName && Number(x.score)===highlightScore);
+    return `<div class="lb-entry">
+      <div class="lb-rank ${rc[i]||''}">${medals[i]||i+1}</div>
+      <div class="lb-name">${e.name}${isNew?'<span class="new-badge">YOU</span>':''}</div>
+      <div class="lb-score">${e.score}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Strategy colors ──
+const SC = {
+  "MIND MAP":"#4fc3f7","SWBST":"#e94560","DATE":"#b39ddb","SIFT":"#00d68f",
+  "SDDS":"#ffd700","RISE UP":"#ff7043","SALT":"#ffb300","TEXT":"#26c6da","IBBC":"#f06292"
+};
+
+// ── Questions ──
+const QS = [
+  {s:"MIND MAP",t:"Informational Text",q:"When reading informational text, MIND MAP helps you identify the ___ topic and important ___ in each section.",b:["main","details"],wb:["main","details","title","paragraphs","headings","ideas"],h:"Think big picture first, then support.",e:"MIND MAP = identify the <strong>main</strong> topic at the center, then branch out the <strong>details</strong> from each section."},
+  {s:"MIND MAP",t:"Informational Text",q:"In MIND MAP, subheadings branch off the ___ topic, and each branch holds an important ___.",b:["main","idea"],wb:["main","idea","paragraph","theme","summary","title"],h:"The center holds the big picture.",e:"The <strong>main</strong> topic sits at the center; each subheading branches off with its own <strong>idea</strong>."},
+  {s:"SWBST",t:"Literary",q:"SWBST stands for Somebody, Wanted, But, ___, Then.",b:["So"],wb:["So","Since","Still","See","Start"],h:"What happens as a result of the conflict?",e:"SWBST = Somebody / Wanted / But / <strong>So</strong> / Then."},
+  {s:"SWBST",t:"Literary",q:"In SWBST, the 'But' column describes the ___ that gets in the character's way.",b:["conflict"],wb:["conflict","solution","theme","setting","climax","mood"],h:"It's what stops the character from getting what they want.",e:"The <strong>conflict</strong> is the obstacle — captured in the 'But' column."},
+  {s:"SWBST",t:"Literary",q:"The 'Then' in SWBST describes the ___ after the conflict is resolved.",b:["resolution"],wb:["resolution","climax","flashback","theme","foreshadowing","mood"],h:"How does the story finally end?",e:"The <strong>resolution</strong> is the story's outcome — what happens after 'So'."},
+  {s:"DATE",t:"Literary",q:"DATE stands for Dialogue, Actions, Thoughts and tone, and ___.",b:["Emotions"],wb:["Emotions","Evidence","Examples","Events","Effects","Explanations"],h:"The last letter is inferred from what characters say and do.",e:"DATE = Dialogue / Actions / Thoughts and tone / <strong>Emotions</strong>."},
+  {s:"DATE",t:"Literary",q:"In DATE, you infer a character's ___ from their actions and dialogue.",b:["emotions"],wb:["emotions","setting","theme","plot","conflict","structure"],h:"Authors don't always tell you how a character feels.",e:"The E in DATE = <strong>emotions</strong>, inferred from what characters say and do."},
+  {s:"SIFT",t:"Poems",q:"SIFT stands for Structure, Imagery, Figurative Language, and ___.",b:["Theme and Tone"],wb:["Theme and Tone","Text Evidence","Topic and Title","Thoughts and Tone"],h:"What is the speaker's message and attitude?",e:"SIFT = Structure / Imagery / Figurative Language / <strong>Theme and Tone</strong>."},
+  {s:"SIFT",t:"Poems",q:"In SIFT, the 'I' asks you to find details that appeal to the five ___.",b:["senses"],wb:["senses","stanzas","syllables","speakers","structures","symbols"],h:"See, hear, taste, smell, feel.",e:"The I in SIFT = Imagery — language that engages the five <strong>senses</strong>."},
+  {s:"SIFT",t:"Poems",q:"In SIFT, Structure asks you to notice line breaks, stanzas, and ___ choices.",b:["punctuation"],wb:["punctuation","rhyme scheme","meter","symbolism","alliteration","diction"],h:"Look at how the poem is physically arranged on the page.",e:"Structure in SIFT includes line breaks, stanzas, capitalization, and <strong>punctuation</strong>."},
+  {s:"SDDS",t:"Drama",q:"When reading drama, SDDS tells you to highlight the ___ of the scene, like 'SCENE 1. In an old abandoned house...'",b:["setting"],wb:["setting","conflict","theme","climax","tone","mood"],h:"When and where does the scene take place?",e:"The S in SDDS = <strong>Setting</strong> — always visualize where and when the drama takes place."},
+  {s:"SDDS",t:"Drama",q:"Stage directions in drama are usually written in ___ and describe what characters physically do.",b:["parentheses"],wb:["parentheses","quotation marks","bold","italics","brackets","all caps"],h:"Example: (She sits calmly)",e:"<strong>Parentheses</strong> are used for stage directions — they describe actions not spoken aloud."},
+  {s:"RISE UP",t:"Test Process",q:"The first step in RISE UP is to ___ and annotate the text before answering questions.",b:["read"],wb:["read","highlight","skim","summarize","rewrite","scan"],h:"You can't answer well if you skip this first step.",e:"RISE UP begins with <strong>Read</strong> and annotate — always engage actively before the questions."},
+  {s:"RISE UP",t:"Test Process",q:"In RISE UP, after finding text evidence, you should ___ wrong answer choices before picking the best one.",b:["eliminate"],wb:["eliminate","circle","rewrite","underline","ignore","guess"],h:"Cross off what can't be right first.",e:"The E in RISE UP = <strong>Eliminate</strong> wrong choices."},
+  {s:"RISE UP",t:"Test Process",q:"RISE UP says to use the ___ when unsure, so you can come back to a question later.",b:["flag"],wb:["flag","process","timer","highlighter","pencil","eraser"],h:"It's a tool on the STAAR digital test.",e:"The U in RISE UP = Use the <strong>flag</strong> — mark uncertain questions and revisit."},
+  {s:"SALT",t:"Highlighting",q:"SALT stands for Special Word, Action, ___, and Topic.",b:["Location"],wb:["Location","Literature","Language","Lines","Literal","Logic"],h:"The L asks: Where in the text can I find the answer?",e:"SALT = Special Word / Action / <strong>Location</strong> / Topic."},
+  {s:"SALT",t:"Highlighting",q:"In SALT, the 'S' tells you to watch for words like '___ ', 'Select TWO', or 'only'.",b:["except"],wb:["except","always","never","mostly","mainly","often"],h:"This word completely flips the direction of the question.",e:"The word <strong>except</strong> changes what the question is asking entirely."},
+  {s:"SALT",t:"Highlighting",q:"The 'T' in SALT stands for ___, which is the 'heart' of what the question is really asking.",b:["Topic"],wb:["Topic","Tone","Theme","Thesis","Text","Title"],h:"Ask yourself: what is this question actually about?",e:"The <strong>T</strong>opic is the core of the question — find it to know where to look."},
+  {s:"TEXT",t:"Writing (SCR)",q:"In TEXT, the 'E' stands for ___, where you cite sentences using 'According to...'",b:["Evidence"],wb:["Evidence","Explanation","Example","Effect","Elaboration","Emphasis"],h:"Use 'According to...' to introduce it.",e:"The E in TEXT = <strong>Evidence</strong> — quote or cite from the text to support your thesis."},
+  {s:"TEXT",t:"Writing (SCR)",q:"The 'X' in TEXT stands for Explanation, where you say 'This ___...' to connect evidence to your thesis.",b:["means"],wb:["means","shows","proves","tells","supports","states"],h:"It's the phrase starter for your explanation.",e:"Explanation uses 'This <strong>means</strong>...' to connect evidence back to your thesis."},
+  {s:"TEXT",t:"Writing (SCR)",q:"The final 'T' in TEXT tells you to ___ your thesis using 'Therefore...'",b:["restate"],wb:["restate","introduce","replace","summarize","copy","expand"],h:"Say your main idea again in new words.",e:"Last T = Thesis <strong>Restated</strong> — wrap your SCR with 'Therefore...'"},
+  {s:"IBBC",t:"Writing (ECR)",q:"IBBC stands for Introduction, Body 1, Body 2, and ___.",b:["Conclusion"],wb:["Conclusion","Claim","Commentary","Connection","Context","Counterclaim"],h:"It's the final paragraph of your essay.",e:"IBBC = Introduction / Body 1 / Body 2 / <strong>Conclusion</strong>."},
+  {s:"IBBC",t:"Writing (ECR)",q:"In the IBBC Introduction, your hook should be a ___ — a comparison using 'like' or 'as'.",b:["simile"],wb:["simile","metaphor","hyperbole","alliteration","theme","claim"],h:"It's figurative language that compares two things.",e:"The IBBC hook is a <strong>simile</strong> — a comparison using 'like' or 'as'."},
+  {s:"IBBC",t:"Writing (ECR)",q:"Each body paragraph in IBBC must include a topic sentence, evidence, and at least ___ sentences of explanation.",b:["2"],wb:["2","1","3","4","5","6"],h:"The IBBC guide says 'at least' this many.",e:"IBBC requires at least <strong>2</strong> sentences of explanation per body paragraph."},
+  {s:"IBBC",t:"Writing (ECR)",q:"In IBBC, the ___ paragraph ends with a thesis restated and a final thought.",b:["Conclusion"],wb:["Conclusion","Introduction","Body 1","Body 2","Hook","Evidence"],h:"It's the last paragraph — what wraps the whole essay?",e:"The <strong>Conclusion</strong> restates the thesis and ends with a final thought."},
+];
+
+const TIMER_MAX = 20;
+let G = {name:"Player",sel:Object.keys(SC),qs:[],cur:0,score:0,correct:0,lives:3,streak:0,best:0,answered:false,blanks:[],tv:TIMER_MAX,ti:null};
+
+function init() {
+  document.getElementById('strategyGrid').innerHTML = Object.keys(SC).map(s =>
+    `<div class="strat-chip selected" data-s="${s}" style="border-color:${SC[s]};color:${SC[s]};background:${SC[s]}22" onclick="toggleStrat(this,'${s}')">${s}</div>`
+  ).join('');
+  loadStartLb();
+}
+
+async function loadStartLb() {
+  const scores = await fetchScores();
+  renderLb(scores, 'startLb');
+}
+
+function toggleStrat(el, s) {
+  el.classList.toggle('selected');
+  el.style.cssText = el.classList.contains('selected') ? `border-color:${SC[s]};color:${SC[s]};background:${SC[s]}22` : '';
+  G.sel = [...document.querySelectorAll('.strat-chip.selected')].map(c=>c.dataset.s);
+}
+
+function showScreen(id) { document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+function goStart() { loadStartLb(); showScreen('startScreen'); }
+
+function startGame() {
+  G.name = document.getElementById('playerName').value.trim() || 'Player';
+  if (!G.sel.length) G.sel = Object.keys(SC);
+  G.qs = QS.filter(q=>G.sel.includes(q.s)).sort(()=>Math.random()-.5);
+  G.cur=0;G.score=0;G.correct=0;G.lives=3;G.streak=0;G.best=0;
+  showScreen('quizScreen');
+  renderHearts();
+  renderQ();
+}
+
+function renderHearts() {
+  document.getElementById('heartsDisplay').innerHTML=[0,1,2].map(i=>`<span class="heart${i>=G.lives?' lost':''}">❤️</span>`).join('');
+}
+
+function startTimer() {
+  clearInterval(G.ti); G.tv=TIMER_MAX; updateTimer();
+  G.ti=setInterval(()=>{G.tv--;updateTimer();if(G.tv<=0){clearInterval(G.ti);timeUp();}},1000);
+}
+
+function updateTimer() {
+  document.getElementById('timerNum').textContent=G.tv;
+  const p=G.tv/TIMER_MAX, circ=2*Math.PI*20;
+  document.getElementById('timerCircle').style.strokeDashoffset=circ*(1-p);
+  const col=p>.5?'var(--timer-ok)':p>.25?'var(--timer-warn)':'var(--timer-danger)';
+  document.getElementById('timerCircle').style.stroke=col;
+  document.getElementById('timerNum').style.color=col;
+}
+
+function timeUp() {
+  if(G.answered)return;
+  G.answered=true;G.lives--;G.streak=0;renderHearts();
+  showFx('⏰ Time!',false);
+  const card=document.getElementById('qCard');card.classList.add('shake');setTimeout(()=>card.classList.remove('shake'),400);
+  const q=G.qs[G.cur];
+  for(let i=0;i<q.b.length;i++){const f=document.getElementById('b'+i);if(f){f.value=q.b[i];f.disabled=true;f.classList.add('revealed');}}
+  document.getElementById('explanationBox').innerHTML=q.e;
+  document.getElementById('explanationBox').classList.add('show');
+  document.getElementById('checkBtn').style.display='none';
+  document.getElementById('nextBtn').style.display='inline-block';
+  updateStreak();
+  if(G.lives<=0)setTimeout(endGame,1200);
+}
+
+function renderQ() {
+  if(G.cur>=G.qs.length){endGame();return;}
+  const q=G.qs[G.cur];G.answered=false;G.blanks=new Array(q.b.length).fill('');
+  const col=SC[q.s];
+  const card=document.getElementById('qCard');card.style.borderColor=col+'55';card.className='q-card card-in';
+  document.getElementById('qBadge').textContent=q.s;document.getElementById('qBadge').style.background=col;
+  document.getElementById('qCategory').textContent=q.t;
+  document.getElementById('qNumLabel').textContent=`${G.cur+1} / ${G.qs.length}`;
+  document.getElementById('progressFill').style.width=(G.cur/G.qs.length*100)+'%';
+  document.getElementById('scoreHud').textContent=G.score;
+  let bi=0;
+  document.getElementById('qText').innerHTML=q.q.replace(/___/g,()=>{
+    const i=bi++;return `<input class="blank-field" id="b${i}" type="text" placeholder="?" autocomplete="off" spellcheck="false"/>`;
+  });
+  for(let i=0;i<q.b.length;i++){
+    const f=document.getElementById('b'+i);
+    f.addEventListener('input',e=>{G.blanks[i]=e.target.value;updateChips();});
+    f.addEventListener('keydown',e=>{if(e.key==='Enter'&&!G.answered)checkAnswer();});
+  }
+  document.getElementById('wordBank').innerHTML=[...q.wb].sort(()=>Math.random()-.5).map(w=>`<div class="word-chip" data-word="${w}" onclick="chipClick(this)">${w}</div>`).join('');
+  document.getElementById('checkBtn').style.display='inline-block';
+  document.getElementById('nextBtn').style.display='none';
+  document.getElementById('explanationBox').className='explanation-box';
+  document.getElementById('explanationBox').innerHTML='';
+  startTimer();
+  setTimeout(()=>{const b=document.getElementById('b0');if(b)b.focus();},100);
+}
+
+function chipClick(el){
+  if(G.answered)return;
+  const w=el.dataset.word,q=G.qs[G.cur];
+  for(let i=0;i<q.b.length;i++){const f=document.getElementById('b'+i);if(f&&!f.value){f.value=w;G.blanks[i]=w;updateChips();return;}}
+}
+
+function updateChips(){
+  const used=G.blanks.filter(Boolean).map(w=>w.toLowerCase());
+  document.querySelectorAll('.word-chip').forEach(c=>c.classList.toggle('used',used.includes(c.dataset.word.toLowerCase())));
+}
+
+function checkAnswer(){
+  if(G.answered)return;clearInterval(G.ti);G.answered=true;
+  const q=G.qs[G.cur];let ok=true;
+  for(let i=0;i<q.b.length;i++){
+    const f=document.getElementById('b'+i);
+    const v=(f?.value||'').trim().toLowerCase();
+    if(v===q.b[i].toLowerCase())f.classList.add('correct');
+    else{f.classList.add('wrong');ok=false;}
+    f.disabled=true;
+  }
+  const card=document.getElementById('qCard');
+  if(ok){
+    const pts=10+Math.floor(G.tv/2)+(G.streak*3);
+    G.score+=pts;G.correct++;G.streak++;if(G.streak>G.best)G.best=G.streak;
+    document.getElementById('scoreHud').textContent=G.score;
+    showFx(G.streak>=3?`🔥 +${pts}`:`✓ +${pts}`,true);
+    card.classList.add('correct-flash');setTimeout(()=>card.classList.remove('correct-flash'),500);
+    if(G.streak>=3)confetti();
+  } else {
+    G.lives--;G.streak=0;renderHearts();showFx('✗ Oops!',false);
+    card.classList.add('shake');setTimeout(()=>card.classList.remove('shake'),400);
+    for(let i=0;i<q.b.length;i++){const f=document.getElementById('b'+i);if(f&&f.classList.contains('wrong')){f.value=q.b[i];f.classList.remove('wrong');f.classList.add('revealed');}}
+  }
+  updateStreak();
+  document.getElementById('explanationBox').innerHTML=q.e;
+  document.getElementById('explanationBox').classList.add('show');
+  document.getElementById('checkBtn').style.display='none';
+  document.getElementById('nextBtn').style.display='inline-block';
+  if(!ok&&G.lives<=0)setTimeout(endGame,1200);
+}
+
+function nextQuestion(){G.cur++;renderQ();}
+function showHint(){const q=G.qs[G.cur];document.getElementById('explanationBox').innerHTML=`💡 <em>${q.h}</em>`;document.getElementById('explanationBox').classList.add('show');}
+function updateStreak(){const b=document.getElementById('streakBadge');if(G.streak>=2){b.textContent=`🔥 ${G.streak} Streak!`;b.classList.add('show');}else b.classList.remove('show');}
+function showFx(text,ok){const el=document.getElementById('floatFb');el.textContent=text;el.className='float-feedback';void el.offsetWidth;el.classList.add(ok?'pop-correct':'pop-wrong');}
+function confetti(){
+  const cols=['#ffd700','#e94560','#00d68f','#4fc3f7','#b39ddb','#ff7043'];
+  for(let i=0;i<30;i++){const el=document.createElement('div');el.className='confetti-piece';el.style.cssText=`left:${Math.random()*100}vw;background:${cols[Math.floor(Math.random()*cols.length)]};width:${6+Math.random()*8}px;height:${6+Math.random()*8}px;border-radius:${Math.random()>.5?'50%':'2px'};animation-duration:${1.5+Math.random()*1.5}s;animation-delay:${Math.random()*.4}s;`;document.body.appendChild(el);setTimeout(()=>el.remove(),3000);}
+}
+
+async function endGame(){
+  clearInterval(G.ti);
+  const total=G.qs.length,pct=total>0?Math.round(G.correct/total*100):0,noLives=G.lives<=0;
+  document.getElementById('endScore').textContent=G.score;
+  document.getElementById('endCorrect').textContent=`${G.correct}/${total}`;
+  document.getElementById('endAccuracy').textContent=pct+'%';
+  document.getElementById('endBest').textContent=G.best+'🔥';
+  document.getElementById('endIcon').textContent=noLives?'💀':pct>=90?'🏆':pct>=70?'🌟':'📚';
+  document.getElementById('endTitle').textContent=noLives?'Game Over!':'Quiz Complete!';
+  document.getElementById('endMsg').textContent=noLives?`Out of lives! Score: ${G.score}`:pct>=90?"Strategy master! You crushed it! 🔥":pct>=70?"Great work! Keep grinding! 💪":"Keep practicing — you'll get there! 📚";
+  if(!noLives&&pct>=70)confetti();
+  showScreen('endScreen');
+  // Push score then reload leaderboard
+  await pushScore(G.name, G.score);
+  // Small delay to let sheet update
+  setTimeout(async()=>{
+    const scores = await fetchScores();
+    renderLb(scores, 'endLb', G.name, G.score);
+  }, 2000);
+}
+
+init();
+</script>
+</body>
+</html>
